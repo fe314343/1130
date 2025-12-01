@@ -6,6 +6,10 @@
 <title>試算表篩選與直式圖檔生成</title>
 <!-- 載入 html-to-image 函式庫用於圖片生成 -->
 <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.12/dist/html-to-image.min.js"></script>
+<!-- 新增：JSZip 用於壓縮檔案 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- 新增：FileSaver.js 用於觸發檔案下載 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <!-- ★ 修正：載入 Noto Serif TC（筆劃外觀最接近傳統楷體/標楷體的網路字體） ★ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet" crossorigin="anonymous">
@@ -13,8 +17,8 @@
 <style>
 /* 確保所有文字優先使用「標楷體」(BiauKai, KaiTi, DFKai-SB) */
 body {
-    /* 修正：優先使用 Noto Serif TC，確保楷體風格，其次是系統字體，最後是通用襯線體 */
-    font-family: 'Noto Serif TC', "BiauKai", "DFKai-SB", "KaiTi", "標楷體", serif;
+    /* 修正：將系統字體「標楷體」及其常見別名置於首位，確保在使用者裝置上有安裝時優先使用。 */
+    font-family: "標楷體", "DFKai-SB", "KaiTi", 'Noto Serif TC', serif;
     background-color: #f0f0f0;
     margin: 0; padding: 20px;
     display: flex;
@@ -103,11 +107,11 @@ select, button {
     writing-mode: vertical-rl;
     text-orientation: upright;
     
-    /* 確保內容區塊也使用標楷體 */
-    font-family: inherit; 
+    /* ★ 確保所有圖檔內文字都是標楷體 */
+    font-family: "標楷體", "DFKai-SB", "KaiTi", 'Noto Serif TC', serif;
     font-size: 32px;
     line-height: 1.2;
-    letter-spacing: 10px; /* 增加字母間距/字距 */
+    letter-spacing: 10px; /* 增加字母間距/字距 - 此為基礎間距 */
     white-space: pre-wrap; /* 支援 \n 換行 */
     word-break: break-word;
 
@@ -116,9 +120,17 @@ select, button {
     text-shadow: 0 0 3px rgba(255,255,255,0.9), 0 0 1px rgba(0,0,0,0.2); 
 }
 
-/* ★ 新增：區域文字的樣式，字體大小設為 24px (主體 30px 的 80%) */
+/* ★ 區域文字的樣式，字體大小設為 20px */
 .small-text {
     font-size: 20px;
+    /* ★ 確保所有圖檔內文字都是標楷體 */
+    font-family: "標楷體", "DFKai-SB", "KaiTi", 'Noto Serif TC', serif;
+}
+
+/* 專門用於對齊的 span，沒有基礎間距 */
+.content-block span {
+    /* 確保 span 繼承所有基本設定，但我們只在 JS 中設定 letter-spacing */
+    display: inline-block;
 }
 
 .download-button-wrapper {
@@ -164,11 +176,11 @@ select, button {
 <body>
 
 <div class="main-container">
-    <h1 style="text-align:center; margin-bottom:10px;">試算表篩選與直式圖檔生成</h1>
+    <h1 style="text-align:center; margin-bottom:10px;">聖訓小卡生成</h1>
 
     <div id="controls">
         <div class="control-group">
-            <label>選擇篩選欄位:</label>
+            <label>選擇欄位:</label>
             <select id="filterField">
                 <option value="班期">班期</option>
                 <option value="日期">日期</option>
@@ -180,7 +192,7 @@ select, button {
         </div>
 
         <div class="control-group">
-            <label>選擇篩選值:</label>
+            <label>選擇值:</label>
             <select id="filterValueSelect" disabled>
                 <option value="">請先選欄位</option>
             </select>
@@ -188,7 +200,8 @@ select, button {
 
         <div class="action-buttons">
             <button class="btn-style" onclick="applyFilter()">開始篩選</button>
-            <button id="downloadAllBtn" class="btn-style" onclick="downloadAllImages()" disabled>下載所有 PNG</button>
+            <!-- 變更按鈕文字為「下載為 ZIP」 -->
+            <button id="downloadAllBtn" class="btn-style" onclick="downloadAllImages()" disabled>下載為 ZIP</button>
         </div>
     </div>
 
@@ -212,6 +225,13 @@ const messageBox = document.getElementById('messageBox');
 const resultsContainer = document.getElementById('resultsContainer');
 const downloadAllBtn = document.getElementById('downloadAllBtn');
 
+// ★ 字元對齊相關常數
+const CHAR_FONT_SIZE_PX = 34; // 字體大小
+const BASE_LETTER_SPACING_PX = 10; // CSS 中 .content-block 的基礎間距
+const VISUAL_CHAR_UNIT_PX = CHAR_FONT_SIZE_PX + BASE_LETTER_SPACING_PX; // 42px，一個字元佔用的視覺空間
+const ALIGN_MIN_TARGET_LEN = 15; // 預設目標長度（字元數）
+
+
 /**
  * 顯示訊息給使用者
  * @param {string} msg 訊息內容
@@ -229,7 +249,7 @@ function hideMessage(){ messageBox.textContent=''; }
  * @param {number} maxCharsPerLine 每行最大字數
  * @returns {string} 處理後的帶有換行符的文字
  */
-function forceVerticalLineBreak(text, maxCharsPerLine=23) { 
+function forceVerticalLineBreak(text, maxCharsPerLine=21) { 
     if (!text) return '';
     const originalLines = text.split('\n');
     let processedLines = [];
@@ -257,6 +277,48 @@ function forceVerticalLineBreak(text, maxCharsPerLine=23) {
     // 將所有行以換行符串接
     return processedLines.join('\n');
 }
+
+/**
+ * 根據最長行調整字元間距，以達到視覺上的垂直對齊 (長度一致)。
+ * @param {string} text 要調整的文字內容。
+ * @param {number} targetLen 目標長度 (字元數)。
+ * @returns {string} 包含 inline style 的 <span> HTML 字串或原始文字。
+ */
+function generateAlignedSpan(text, targetLen) {
+    if (!text || text.trim().length === 0) return text;
+    // 使用文字的實際字數
+    const currentLen = text.length;
+
+    // 如果文字長度已經大於或等於目標長度，則無需調整間距
+    if (currentLen >= targetLen) {
+        return text;
+    }
+
+    // 我們需要補足的字元單位數量
+    const neededCharUnits = targetLen - currentLen;
+    // 總共需要的額外像素空間
+    const totalExtraSpaceNeededPx = neededCharUnits * VISUAL_CHAR_UNIT_PX;
+    
+    const numGaps = currentLen - 1;
+
+    let finalSpan = text;
+
+    if (numGaps > 0) {
+        // 將總額外空間平均分配到每個間隙中
+        const extraSpacingPerGap = totalExtraSpaceNeededPx / numGaps;
+        // 新的 letter-spacing = 基礎間距 + 每個間隙的額外間距
+        const totalSpacing = BASE_LETTER_SPACING_PX + extraSpacingPerGap;
+        
+        // 將文字包裝在 span 內，並應用計算出的 letter-spacing
+        finalSpan = `<span style="letter-spacing:${totalSpacing.toFixed(2)}px;">${text}</span>`;
+    } else if (currentLen === 1) {
+        // 如果只有一個字，無法調整間距，改為補全形空白
+        finalSpan = text + '　'.repeat(neededCharUnits); 
+    }
+    
+    return finalSpan;
+}
+
 
 /**
  * 獲取試算表資料
@@ -378,7 +440,7 @@ function applyFilter(){
         img.setAttribute('crossOrigin', 'anonymous'); 
         
         // 替換為您的圖片 URL
-        img.src = "https://chy0205.github.io/1110/120106.jpg";
+        img.src = "https://chy0205.github.io/1110/1201.png";
         img.onerror = () => { console.error('Image failed to load'); img.src = 'https://placehold.co/720x1280/eeeeee/333333?text=背景圖載入失敗'; };
         itemDiv.appendChild(img);
 
@@ -386,31 +448,56 @@ function applyFilter(){
         const contentBlock = document.createElement("div");
         contentBlock.className = "content-block";
 
-        let finalContent = "\n";
-        const name = row["姓名"] || "";
-        const content = row["內容"] || ""; // 獲取原始內容
-
-        // 日期
-        if(row["日期"]) finalContent += ` ${row["日期"]}\n`;
-
-        // 仙佛與班期
+        // ★ 處理標頭兩行文字，計算長度以進行對齊
+        let dateLineText = '';
+        if(row["日期"]) {
+            dateLineText = ` ${row["日期"]}`; // 開頭一個半形空格
+        }
+        
+        let deityCourseLineText = '';
         if(row["仙佛"] || row["班期"]){
-            let text = "　";
-            finalContent += text + "\n\n";
+            let text = "　"; // 開頭一個全形空格
+            if(row["仙佛"]) text += row["仙佛"];
+            if(row["班期"]) text += `慈悲於${row["班期"]}`;
+            deityCourseLineText = text;
         }
 
-        const indent4 = "　　　　"; // 4 個全形空白
+        // 找出最長的視覺長度（以字數計）作為目標
+        const finalMaxLen = Math.max(dateLineText.length, deityCourseLineText.length);
+        const targetLen = finalMaxLen > 1 ? finalMaxLen : ALIGN_MIN_TARGET_LEN;
+
+        let finalContentString = "\n"; 
+        
+        // 1. 日期行：應用對齊
+        finalContentString += generateAlignedSpan(dateLineText, targetLen) + '\n';
+
+        // 2. 仙佛與班期行：應用對齊
+        finalContentString += generateAlignedSpan(deityCourseLineText, targetLen) + '\n';
+
+
+        const name = row["姓名"] || "";
+        const content = row["內容"] || ""; // 獲取原始內容
+        
+        // ★ 根據使用者要求，固定內容的起始位置總共偏移 8 個字元 (包括姓名和分隔符號)
+        const FIXED_TOTAL_INDENT = 8;
+        
+        // 1. 計算 namePrefix 前需要的縮排 (indentString)
+        const nameAndSeparatorLength = name.length + 1; // 姓名長度 + 1 (分隔符號 '|')
+        const requiredPrefixSpaces = Math.max(0, FIXED_TOTAL_INDENT - nameAndSeparatorLength);
+        
+        const indentString = "　".repeat(requiredPrefixSpaces); // 計算新的前綴縮排 (取代原來的 indent4)
         
         // 姓名（蔡廣生|） - 位於第一行的前綴
-        const namePrefix = name ? `${indent4}${name}|` : "";
+        // 確保總長度為 FIXED_TOTAL_INDENT
+        const namePrefix = name ? `${indentString}${name}|` : "";
 
         // 設定每行最大字數，避免超出直式高度
-        const maxCharsPerLine = 21; 
+        const maxCharsPerLine = 19; 
         const wrappedContent = forceVerticalLineBreak(content, maxCharsPerLine);
         const lines = wrappedContent.split("\n");
 
-        // 計算後續行的縮排字元數：4 (indent4) + 姓名長度 + 1 (分隔符號)
-        const totalIndent = 4 + name.length + 1;
+        // 2. 計算後續行的縮排字元數：固定為 8 
+        const totalIndent = FIXED_TOTAL_INDENT;
         const contentIndentString = "　".repeat(totalIndent);
 
         let formatted = "";
@@ -420,35 +507,40 @@ function applyFilter(){
                 formatted += line; 
             }
             else {
-                // 第二行及以後的內容需要換行並縮排對齊第一行姓名之後的位置
+                // 第二行及以後的內容需要換行並縮排對齊第一行姓名之後的位置 (固定 8 格)
                 formatted += '\n' + contentIndentString + line;
             }
         });
 
         // 由於區域文字需要應用不同的樣式，我們將內容變數改為支援 HTML
-        let finalHTML = finalContent + namePrefix + formatted;
+        let finalHTML = finalContentString + namePrefix + formatted;
 
-        /* 區域 - 修正邏輯：根據最後一行內容字數決定是否換行 */
+        /* 區域 - 實作換行邏輯 (根據最後一行內容字數決定是否換列) */
         if(row["區域"]){
             // 取得實際內容的最後一行 (lines 陣列中最後一個元素)
             const lastContentLine = lines[lines.length - 1] || '';
-            const lastLineLength = lastContentLine.length; // 該行的實際字數
-
-            let prefix = ''; // 預設：同行並加一個空白間隔
+            const lastLineLength = lastContentLine.length; 
             
-            // 判斷邏輯：如果最後一行字數少於 2 個字，則換到新的一行（新的垂直列）
-            if (lastLineLength < 2) { 
-                // 換到新的一行，並加入標準的內容縮排，使其與前面內容對齊
-                prefix = '\n' +contentIndentString; 
-            } else {
-                // 如果字數夠多（>= 2），則同行接續，用一個全形空白隔開
-                prefix = '\n' +contentIndentString;
+            // 使用者要求：臨界值為 15
+            const maxCharsForSameLine = 15; 
+
+            let prefix = ''; 
+            
+            // 1. 如果最後一行字數 > 15 (需要換到下一列/新行，並有縮排)
+            if (lastLineLength > maxCharsForSameLine) {
+                // 換到新的一列 (\n)，並加入標準的內容縮排 (contentIndentString，此時為固定的 8 格)
+                prefix = '\n' + contentIndentString; 
+            } 
+            // 2. 如果最後一行字數 <= 15 (接在內容的下面/同一列，加全形空格分隔)
+            else {
+                // 在同一列/行接續，只需要一個全形空格來分隔內容和區域
+                prefix = ''; 
             }
 
-            // ★ 修正：將區域內容用 <span> 包裹並應用 .small-text 類別
+            // 將區域內容用 <span> 包裹並應用 .small-text 類別
             const areaHtml = `<span class="small-text">（${row["區域"]}）</span>`;
 
-            // 使用模板字串和半形括號
+            // 在區域文字前後加上全形括號，並與內容文字串接
             finalHTML += `${prefix}${areaHtml}`; 
         }
 
@@ -461,7 +553,7 @@ function applyFilter(){
         btnWrapper.className="download-button-wrapper";
         const btn=document.createElement("button");
         btn.className="btn-style";
-        btn.textContent="下載 PNG";
+        btn.textContent="下載 PNG"; // 單獨下載按鈕仍是下載 PNG
 
         const filename=`${row["姓名"]||"未知"}-${row["區域"]||"未知"}`;
         btn.onclick=()=>generateImage(itemDiv, filename);
@@ -475,7 +567,7 @@ function applyFilter(){
 }
 
 /**
- * 截圖並下載單個圖片
+ * 截圖並下載單個圖片 (用於單一按鈕)
  * @param {HTMLElement} element 要截圖的 DOM 元素
  * @param {string} filename 儲存檔名
  * @param {function():void} callback 下載完成後的回調函數
@@ -507,34 +599,61 @@ async function generateImage(element, filename, callback=()=>{}){
 }
 
 /**
- * 下載所有生成的圖片
+ * 下載所有生成的圖片，並將其打包成 ZIP 檔案
  */
 async function downloadAllImages(){
     if(downloadableItems.length===0) return;
 
     downloadAllBtn.disabled=true;
-    displayMessage("開始下載...");
+    displayMessage("開始打包 ZIP 檔案，請稍候...");
 
+    // 1. 初始化 JSZip
+    const zip = new JSZip();
+    const folder = zip.folder("generated_images");
     const delay = ms => new Promise(r=>setTimeout(r, ms));
 
-    // 依序下載所有項目，並在每次下載間隔 500ms
-    for(let i=0;i<downloadableItems.length;i++){
-        const item = downloadableItems[i];
-        displayMessage(`下載中：${item.filename} (${i+1}/${downloadableItems.length})`);
-        
-        await new Promise(resolve=>{
-            // generateImage 內會執行下載
-            generateImage(item.element, item.filename, ()=>resolve());
-        });
-        
-        // 加入延遲，防止瀏覽器阻擋連續下載
-        await delay(500); 
-    }
+    try {
+        // 2. 依序生成圖片 Blob 並加入 ZIP 檔案
+        for(let i=0;i<downloadableItems.length;i++){
+            const item = downloadableItems[i];
+            // 截圖前暫時隱藏下載按鈕
+            const hideBtn = item.element.querySelector('.download-button-wrapper');
+            if(hideBtn) hideBtn.style.display='none';
 
-    displayMessage("全部下載完成！");
-    downloadAllBtn.disabled=false;
+            displayMessage(`處理中：${item.filename}.png (${i+1}/${downloadableItems.length})`);
+            
+            // 使用 htmlToImage.toBlob 取得圖片 Blob
+            const imageBlob = await htmlToImage.toBlob(item.element, {
+                // 確保背景圖完全載入 (雖然此處已設定onerror，但為保險仍保留)
+                // 且為了壓縮後檔案大小，設定為 PNG 格式
+                quality: 0.95 
+            });
+
+            // 將 Blob 加入 ZIP 檔案
+            folder.file(`${item.filename}.png`, imageBlob);
+
+            // 截圖後恢復顯示下載按鈕
+            if(hideBtn) hideBtn.style.display='block';
+            
+            // 加入延遲，防止瀏覽器過度佔用資源
+            await delay(500); 
+        }
+
+        // 3. 生成 ZIP 檔案 (Blob)
+        displayMessage("正在壓縮檔案...");
+        const zipBlob = await zip.generateAsync({type: "blob"});
+
+        // 4. 使用 FileSaver.js 觸發下載
+        saveAs(zipBlob, "試算表圖檔輸出.zip");
+
+        displayMessage("ZIP 檔案下載完成！");
+    } catch(e) {
+        console.error("生成 ZIP 失敗:", e);
+        displayMessage(`生成 ZIP 失敗: ${e.message}`, true);
+    } finally {
+        downloadAllBtn.disabled=false;
+    }
 }
 </script>
 </body>
 </html>
-
