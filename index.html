@@ -515,7 +515,7 @@ function applyFilter(){
         const content = row["內容"] || ""; // 獲取原始內容
         
         // ★ 內容文字縮排邏輯：確保內容與前面的標題有固定間隔 ★
-        const FIXED_TOTAL_INDENT = 8; // 固定總縮排字元數 (從最右側列開始計算的縮排，包括姓名和分隔符號)
+        const FIXED_TOTAL_INDENT = 7; // 固定總縮排字元數 (從最右側列開始計算的縮排，包括姓名和分隔符號)
         
         // 1. 計算 namePrefix (姓名) 前需要的縮排 (indentString)
         const nameAndSeparatorLength = name.length + 1; // 姓名長度 + 1 (分隔符號 '|')
@@ -528,7 +528,7 @@ function applyFilter(){
         const namePrefix = name ? `${indentString}${name}|` : "";
 
         // 設定每行最大字數，避免超出直式高度 (1280px)
-        const maxCharsPerLine = 18; 
+        const maxCharsPerLine = 19; 
         // 呼叫斷行函式，處理原始內容中的換行和長度限制
         const wrappedContent = forceVerticalLineBreak(content, maxCharsPerLine);
         const lines = wrappedContent.split("\n"); // 獲取所有處理後的行
@@ -697,4 +697,5 @@ async function downloadAllImages(){
 </script>
 </body>
 </html>
+
 
