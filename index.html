@@ -112,7 +112,7 @@ select, button {
     text-orientation: upright;
     
     font-family: "標楷體", "DFKai-SB", "KaiTi", 'Noto Serif TC', serif;
-    font-size: 32px; /* 基礎字體大小 */
+    font-size: 30px; /* 基礎字體大小 */
     line-height: 1.2; /* 行距 (控制字行之間的垂直距離) */
     letter-spacing: 13px; /* 基礎字元間距 (控制字元間的水平距離) */
     white-space: pre-wrap; /* 允許文字保留原始換行符 (\n) 且自動換行 */
@@ -245,7 +245,7 @@ const resultsContainer = document.getElementById('resultsContainer');
 const downloadAllBtn = document.getElementById('downloadAllBtn');
 
 // ★ 字元對齊和間距相關常數 - 這是直式標題對齊的核心 ★
-const CHAR_FONT_SIZE_PX = 32; // 內容區塊的字體大小 (用於計算視覺空間)
+const CHAR_FONT_SIZE_PX = 30; // 內容區塊的字體大小 (用於計算視覺空間)
 const BASE_LETTER_SPACING_PX = 13; // CSS 中 .content-block 設定的基礎字距
 // 一個字元在直式書寫中佔用的視覺空間 (字體大小 + 基礎字距)
 const VISUAL_CHAR_UNIT_PX = CHAR_FONT_SIZE_PX + BASE_LETTER_SPACING_PX; // 44px
@@ -642,3 +642,4 @@ async function downloadAllImages(){
 </script>
 </body>
 </html>
+
