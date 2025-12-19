@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- 設定 viewport 確保網頁在移動裝置上能正確縮放 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>聖訓小卡生成</title>
+<title>聖訓小卡生成 (iOS修復版)</title>
 
 <!-- 載入 html-to-image 函式庫，用於將 HTML 元素轉換為圖片 (DOM 截圖) -->
 <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.12/dist/html-to-image.min.js"></script>
@@ -18,7 +18,7 @@
 
 <style>
 /* ---------------------------------------------------- */
-/* ★ 全域樣式設定 (Global Styles) ★                        */
+/* ★ 全域樣式設定 (Global Styles) ★                         */
 /* ---------------------------------------------------- */
 body {
     /* 字體設定：優先使用使用者系統內建的「標楷體」或其常見別名，以符合書寫風格。
@@ -242,12 +242,12 @@ select, button, input[type="number"] {
 
 // Google Apps Script 部署的 URL，用於從 Google Sheets 獲取 JSON 資料
 const GS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPsok1XF4E4PQEmckvxK3pY8GPI1GeTrceC5Oz5deQbDMvmgtJxd1e-WcIV4GjgxZV3g/exec';
-// 背景圖片的原始網址
+// 背景圖片的原始網址 (請確保此圖片允許 CORS，或是相對路徑)
 const BG_IMAGE_URL = './1201.png';
 
 // ★ 模擬資料 (如果外部 Google Sheet 載入失敗時使用) ★
 const MOCK_DATA = [
-    {"班期": "第一班", "日期": "二零二四年一月一日", "仙佛": "濟公活佛", "姓名": "張三", "內容": "為了解決資料載入失敗的問題，我們加入了模擬資料。現在即使網路或伺服器出錯，應用程式也能正常啟動。內容會自動換行，不受高度限制。這一段文字很長，長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！", "區域": "台北"},
+    {"班期": "第一班", "日期": "二零二四年一月一日", "仙佛": "濟公活佛", "姓名": "張三", "內容": "為了解決資料載入失敗的問題，我們加入了模擬資料。現在即使網路或伺服器出錯，應用程式也能正常啟動。內容會自動換行，不受高度限制。這一段文字很長，長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！長度測試！", "區域": "台北"},
     {"班期": "第二班", "日期": "二零二四年二月二日", "仙佛": "觀音大士", "姓名": "李四", "內容": "這是一個較短的內容範例。字數較少時，排版也會很整齊。這個內容很短，並且這是第二段內容。第二段內容也要縮排才行！", "區域": "台中"},
 ];
 
@@ -309,16 +309,22 @@ function hideMessage(){ messageBox.textContent=''; }
 
 /**
  * 預先載入背景圖片並轉換為 Base64 DataURL。
- * 這能解決大部分手機或瀏覽器在截圖時因為 CORS (跨域) 問題導致背景空白的情況。
+ * 這是解決 iOS Safari 截圖背景空白最有效的方法。
  */
 async function preloadBackground() {
     if (cachedBgBase64) return cachedBgBase64;
     
     try {
         console.log("開始下載背景圖並轉換...");
-        // 使用 fetch 抓取圖片
+        // 嘗試獲取圖片
         const response = await fetch(BG_IMAGE_URL, { mode: 'cors' });
-        if (!response.ok) throw new Error("Network response was not ok");
+        
+        // 如果是本地檔案或跨域失敗，fetch 可能會報錯或 not ok，這裡做基本檢查
+        if (!response.ok) {
+             console.warn("Fetch response not ok:", response.status);
+             // 即使不 OK，有時本地測試也會進這裡，若無法轉 Base64，回傳原網址作為備案
+             return BG_IMAGE_URL;
+        }
         
         const blob = await response.blob();
         
@@ -327,15 +333,18 @@ async function preloadBackground() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 cachedBgBase64 = reader.result;
-                console.log("背景圖轉換成功");
+                console.log("背景圖轉換 Base64 成功");
                 resolve(reader.result);
             };
-            reader.onerror = reject;
+            reader.onerror = (e) => {
+                console.error("FileReader error", e);
+                // 失敗時回傳原網址，盡人事
+                resolve(BG_IMAGE_URL);
+            };
             reader.readAsDataURL(blob);
         });
     } catch (e) {
-        console.warn("無法轉換背景圖為 Base64 (可能是跨域限制)，將退回使用原始網址。", e);
-        // 如果轉換失敗，退回使用原始網址，至少讓瀏覽器嘗試載入
+        console.warn("無法轉換背景圖為 Base64 (可能是跨域限制或本地檔案)，將退回使用原始網址。", e);
         return BG_IMAGE_URL;
     }
 }
@@ -442,8 +451,9 @@ function populateFilterValues(data, fieldKey){
 
 // 頁面載入後初始化
 document.addEventListener('DOMContentLoaded', async()=>{
-    // 預先偷偷開始載入背景圖，加快稍後的速度
-    //preloadBackground(); 
+    // ★ iOS 關鍵修復：盡早開始轉換背景圖 ★
+    // 我們不等待它完成，讓它在背景執行，applyFilter 時會 await 它
+    preloadBackground(); 
 
     const initializeData = async () => {
         // 確保資料載入，無論是來自外部還是模擬
@@ -481,6 +491,9 @@ async function applyFilter(){
     if(!globalSheetData){ displayMessage('資料尚未載入',true); return; }
     if(!filterValue){ displayMessage('請選擇篩選值',true); return; }
 
+    // ★ iOS 關鍵修復：確保背景圖已準備好 (如果是第一次點擊，這裡會等待轉換完成) ★
+    const bgSrc = await preloadBackground();
+
     const filtered = globalSheetData.filter(row=>{
         const v=row[filterKey];
         return v && v.toString().trim().toLowerCase() === filterValue; 
@@ -491,8 +504,6 @@ async function applyFilter(){
         resultsContainer.innerHTML=`<p>無資料：${valueSelect.value}</p>`;
         return;
     }
-
-    displayMessage(`找到 ${filtered.length} 筆資料`);
 
     displayMessage(`找到 ${filtered.length} 筆資料`);
     downloadAllBtn.disabled=false;
@@ -521,7 +532,13 @@ async function applyFilter(){
         /* 圖片（背景圖） */
         const img = document.createElement("img");
         img.className = "result-img";
-        img.src = BG_IMAGE_URL;
+        // ★ iOS 關鍵修復：使用 Base64 作為來源，避開 CORS 問題 ★
+        img.src = bgSrc; 
+        
+        // 如果轉換失敗導致 src 仍是 URL，加上 crossOrigin 作為保險
+        if (bgSrc === BG_IMAGE_URL) {
+            img.crossOrigin = "anonymous";
+        }
 
         img.onerror = () => { 
             console.error('Image failed to load in DOM'); 
@@ -738,10 +755,18 @@ async function generateImage(element, filename, callback=()=>{}){
     if(hideBtn) hideBtn.style.display='none';
 
     try {
-        // 設定更嚴格的截圖參數
+        // ★ iOS 修復：調整截圖參數 ★
         const options = {
             quality: 0.95,
-            backgroundColor: '#ffffff' // 設定白色背景作為保底
+            // 強制使用 CORS，即使是 Base64 也沒壞處
+            useCORS: true, 
+            // 重要的 iOS 修復：關閉 allowTaint。如果開啟，iOS Safari 常因為安全理由拒絕導出 Blob
+            allowTaint: false, 
+            backgroundColor: '#ffffff',
+            // 增加 cacheBust 可以解決部分圖片刷新問題
+            cacheBust: true,
+            // 在某些高解析度 iPhone 上，限制 pixelRatio 可以避免記憶體溢出，預設是 devicePixelRatio
+            pixelRatio: window.devicePixelRatio || 1
         };
 
         const blob = await htmlToImage.toBlob(element, options);
@@ -783,12 +808,14 @@ async function downloadAllImages(){
 
             displayMessage(`處理中：${item.filename}.png (${i+1}/${downloadableItems.length})`);
             
-            // 同步更新下載全部的選項
+            // ★ iOS 修復：同步更新下載全部的選項 ★
             const options = {
                 quality: 0.95,
                 useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff'
+                allowTaint: false, // 修正：不要使用 allowTaint
+                backgroundColor: '#ffffff',
+                cacheBust: true,
+                pixelRatio: window.devicePixelRatio || 1
             };
 
             const imageBlob = await htmlToImage.toBlob(item.element, options);
@@ -812,4 +839,3 @@ async function downloadAllImages(){
 </script>
 </body>
 </html>
-
