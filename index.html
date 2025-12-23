@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>聖訓小卡生成 (文字加粗版)</title>
+<title>聖訓小卡生成</title>
 
 <!-- 載入必要函式庫 -->
 <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.12/dist/html-to-image.min.js"></script>
@@ -156,7 +156,7 @@ select, button, input[type="number"] {
 <body>
 
 <div class="main-container">
-    <h2 style="text-align:center; margin-bottom:15px;">聖訓小卡生成系統 (加粗版)</h2>
+    <h2 style="text-align:center; margin-bottom:15px;">聖訓小卡生成</h2>
 
     <div id="controls">
         <div class="control-group">
@@ -433,11 +433,12 @@ async function downloadAllImages() {
         updateMessage(`進度: ${idx + 1}/${downloadableItems.length}`);
     }
     const content = await zip.generateAsync({ type: "blob" });
-    saveAs(content, "聖訓批次導出.zip");
+    saveAs(content, "聖訓小卡.zip");
     btnAll.disabled = false;
     updateMessage("下載完成", "green");
 }
 </script>
 </body>
 </html>
+
 
