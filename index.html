@@ -82,20 +82,6 @@ select, input, button {
 /* 對齊用 Span */
 .content-block span { display: inline-block; }
 
-/* 個別調整面板 */
-.card-editor-overlay {
-  position: absolute; bottom: 20px; left: 20px; z-index: 10;
-  background: rgba(255, 255, 255, 0.92);
-  padding: 12px; border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  display: flex; flex-direction: column; gap: 8px;
-  width: 180px; border: 1px solid #ddd;
-  writing-mode: horizontal-tb; /* 強制橫向顯示 */
-  }
-.card-editor-overlay label { margin: 0; color: #333; font-size: 0.8rem; }
-.card-editor-overlay input[type="range"] { cursor: pointer; }
-.card-editor-overlay .font-val { font-family: sans-serif; font-weight: bold; color: #d9534f; }
-
 /* 下載按鈕包裝器 (截圖時會隱藏) */
 .download-button-wrapper {
     position: absolute; bottom: 25px; left: 25px; z-index: 10;
@@ -295,51 +281,30 @@ async function applyFilter() {
             }
         }
 
+        mainBlock.innerHTML = finalContentHtml;
+        wrap.appendChild(mainBlock);
 
-        // 執行首次渲染
-        renderMainContent(defaultFontSize);
-
-        // 控制面板 (僅預覽時可見，下載時會隱藏)
-        const overlay = document.createElement('div');
-        overlay.className = 'card-editor-overlay';
-        
-        const sizeLabel = document.createElement('label');
-        sizeLabel.innerHTML = `字體大小: <span class="font-val">${defaultFontSize}</span> px`;
-        
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = 20;
-        slider.max = 65;
-        slider.value = defaultFontSize;
-        slider.oninput = (e) => {
-            const val = e.target.value;
-            sizeLabel.querySelector('.font-val').innerText = val;
-            renderMainContent(parseInt(val));
-        };
-
-        const dlBtn = document.createElement('button');
-        dlBtn.className = 'btn-primary';
-        dlBtn.innerText = "下載此張 PNG";
-        dlBtn.onclick = () => saveSingle(wrap, `${row['姓名'] || '無名'}-${row['區域'] || '無區域'}`);
-
-        overlay.appendChild(sizeLabel);
-        overlay.appendChild(slider);
-        overlay.appendChild(dlBtn);
-        wrap.appendChild(overlay);
+        // 下載按鈕
+        const btnWrap = document.createElement('div');
+        btnWrap.className = 'download-button-wrapper';
+        const btn = document.createElement('button');
+        btn.className = 'btn-primary';
+        btn.innerText = "下載 PNG";
+        btn.onclick = () => saveSingle(wrap, `${row['姓名']}-${row['區域']}`);
+        btnWrap.appendChild(btn);
+        wrap.appendChild(btnWrap);
 
         container.appendChild(wrap);
-        itemsToDownload.push({ element: wrap, filename: `${row['姓名'] || '無名'}-${row['區域'] || '無區域'}` });
+        itemsToDownload.push({ el: wrap, name: `${row['姓名']}-${row['區域']}` });
     });
     
-    document.getElementById('downloadAllBtn').disabled = (filtered.length === 0);
-    document.getElementById('messageBox').innerHTML = `✅ 已生成 ${filtered.length} 張小卡，可個別調整後下載。`;
+    document.getElementById('downloadAllBtn').disabled = false;
 }
 
 // iOS 穩定版下載函數
 async function saveSingle(el, name) {
-const overlay = el.querySelector('.card-editor-overlay');
-    overlay.style.display = 'none'; // 隱藏按鈕區
-    
+    const btn = el.querySelector('.download-button-wrapper');
+    btn.style.display = 'none';
     
     const options = { 
         quality: 1.0, 
@@ -409,9 +374,6 @@ window.onload = init;
 
 </body>
 </html>
-
-
-
 
 
 
