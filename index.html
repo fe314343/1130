@@ -275,7 +275,7 @@ async function applyFilter() {
             const areaPx = areaText.length * (22 + BASE_LETTER_SPACING_PX);
             
             if(lastLinePx + areaPx + 40 < 1210) {
-                finalContentHtml += " " + areaHtml;
+                finalContentHtml += areaHtml;
             } else {
                 finalContentHtml += "\n" + indentStr + areaHtml;
             }
@@ -302,7 +302,7 @@ async function applyFilter() {
 }
 
 // iOS 穩定版下載函數
-async function saveImage(el, name) {
+async function saveSingle(el, name) {
     const btn = el.querySelector('.download-button-wrapper');
     btn.style.display = 'none';
     
@@ -331,7 +331,7 @@ async function saveImage(el, name) {
     }
 }
 
-async function downloadAllImages() {
+async function downloadAllImages()  {
     const btnAll = document.getElementById('downloadAllBtn');
     btnAll.disabled = true;
     updateMessage("正在打包 ZIP...", "orange");
@@ -374,4 +374,5 @@ window.onload = init;
 
 </body>
 </html>
+
 
