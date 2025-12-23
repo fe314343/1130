@@ -283,24 +283,6 @@ async function applyFilter() {
 
         mainBlock.innerHTML = finalContentHtml;
         wrap.appendChild(mainBlock);
-        
-        // 控制面板 (僅預覽時可見，下載時會隱藏)
-        const overlay = document.createElement('div');
-        overlay.className = 'card-editor-overlay';
-        
-        const sizeLabel = document.createElement('label');
-        sizeLabel.innerHTML = `字體大小: <span class="font-val">${defaultFontSize}</span> px`;
-        
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = 20;
-        slider.max = 65;
-        slider.value = defaultFontSize;
-        slider.oninput = (e) => {
-            const val = e.target.value;
-            sizeLabel.querySelector('.font-val').innerText = val;
-            renderMainContent(parseInt(val));
-        };
 
         // 下載按鈕
         const btnWrap = document.createElement('div');
@@ -392,6 +374,7 @@ window.onload = init;
 
 </body>
 </html>
+
 
 
 
