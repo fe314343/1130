@@ -181,7 +181,7 @@ select, button, input[type="number"] {
         </div>
         <div class="action-buttons">
             <button class="btn-style" onclick="applyFilter()">開始生成</button>
-            <button id="downloadAllBtn" class="btn-style" onclick="downloadAllImages()" disabled>打包 ZIP</button>
+            <button id="downloadAllBtn" class="btn-style" onclick="downloadAllImages()" disabled>下載 ZIP</button>
         </div>
     </div>
 
@@ -429,7 +429,7 @@ async function saveImage(el, name) {
 async function downloadAllImages() {
     const btnAll = document.getElementById('downloadAllBtn');
     btnAll.disabled = true;
-    updateMessage("正在打包 ZIP...", "orange");
+    updateMessage("正在下載 ZIP...", "orange");
     
     const zip = new JSZip();
     // ★ 加入 style 重設
@@ -466,6 +466,7 @@ async function downloadAllImages() {
 </script>
 </body>
 </html>
+
 
 
 
