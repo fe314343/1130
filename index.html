@@ -314,11 +314,10 @@ async function applyFilter() {
         const item = document.createElement('div');
         item.className = 'result-item';
         
-        const bgImg = document.createElement('img');
-        bgImg.src = BG_BASE64;
-        bgImg.className = 'card-bg';
-        bgImg.crossOrigin = "anonymous";
-        item.appendChild(bgImg);
+        const img = document.createElement('img');
+        img.className = 'result-img';
+        img.src = BASE64_BG;
+        item.appendChild(img);
 
         const header = document.createElement('div');
         header.className = 'content-block header-block';
@@ -467,6 +466,7 @@ async function downloadAllImages() {
 </script>
 </body>
 </html>
+
 
 
 
