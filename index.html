@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>聖訓小卡製作</title>
+    <title>聖訓小卡製</title>
 
     <!-- 核心函式庫 -->
     <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.12/dist/html-to-image.min.js"></script>
@@ -93,7 +93,7 @@
     
     <div id="controls">
         <div class="control-group">
-            <label>篩選欄位</label>
+            <label>選擇大項目</label>
             <select id="filterField">
                 <option value="班期">班期</option>
                 <option value="日期">日期</option>
@@ -103,11 +103,11 @@
             </select>
         </div>
         <div class="control-group">
-            <label>篩選數值</label>
+            <label>選擇內容</label>
             <select id="filterValueSelect" disabled><option>載入中...</option></select>
         </div>
         <div class="control-group">
-            <label>批次字體 (px)</label>
+            <label>原始字體大小</label>
             <input type="number" id="fontSizeInput" value="34" min="20" max="60">
         </div>
         <div class="action-buttons" style="display:flex; align-items:flex-end; gap:10px;">
@@ -116,7 +116,7 @@
         </div>
     </div>
 
-    <div id="messageBox" style="font-size:0.85rem; margin-bottom:10px; font-weight:bold; color: #555;">正在連線雲端資料庫...</div>
+    <div id="messageBox" style="font-size:0.85rem; margin-bottom:10px; font-weight:bold; color: #555;">正在連線資料庫...</div>
     <div id="resultsContainer"></div>
 </div>
 
@@ -337,7 +337,7 @@ async function saveSingle(el, name) {
 async function downloadAllImages()  {
     const btnAll = document.getElementById('downloadAllBtn');
     btnAll.disabled = true;
-    updateMessage("正在打包 ZIP...", "orange");
+    updateMessage("正在下載ZIP...", "orange");
     
     const zip = new JSZip();
     const options = { 
@@ -357,11 +357,11 @@ async function downloadAllImages()  {
             console.error(err);
         }
         overlay.style.display = 'flex';
-        updateMessage(`打包進度: ${idx + 1}/${itemsToDownload.length}`);
+        updateMessage(`下載進度: ${idx + 1}/${itemsToDownload.length}`);
     }
     
     const content = await zip.generateAsync({ type: "blob" });
-    saveAs(content, "聖訓小卡批次匯出.zip");
+    saveAs(content, "聖訓小卡.zip");
     btnAll.disabled = false;
     updateMessage("✅ ZIP 下載完成", "green");
 }
@@ -371,4 +371,3 @@ window.onload = init;
 
 </body>
 </html>
-
