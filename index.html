@@ -272,7 +272,7 @@ function renderContentBody(mainBlock, row, fontSize) {
     const indentStr = "　".repeat(prefix.length); // 計算換行後的縮排空格數
     
     // 計算每行可容納的最大字數 (估計值)
-    const maxCharsPerRow = Math.floor(1130 / (fontSize + BASE_LETTER_SPACING_PX)) - 1;
+    const maxCharsPerRow = Math.floor(1260 / (fontSize + BASE_LETTER_SPACING_PX)) - 1;
     
     let finalContentHtml = "";
     // 將訓文按最大長度切分
@@ -440,4 +440,5 @@ window.onload = init;
 
 </body>
 </html>
+
 
